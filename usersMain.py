@@ -39,8 +39,8 @@ class RemUser(Resource):
             output = 'Deleted Successfully!'
         else:
             output = 'ERROR! RETURN APPROPRIATE ERROR CODE!!'
-
         return output
+
 
 api.add_resource(AddUser,'/user')
 api.add_resource(RemUser,'/user/<username>')
