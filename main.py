@@ -16,9 +16,7 @@ class AddUser(Resource):
         user = mongo.db.user 
         username = request.json['username']
         password = request.json['password']
-
         user_id = user.insert({'username' : username, 'password' : password})
-        
         new_user = user.find_one({'_id' : user_id})
         output = {'username' : new_user['username'], 'password' : new_user['password']}
         return output
@@ -29,7 +27,6 @@ class AddUser(Resource):
         output = []
         for q in user.find():
             output.append({'username':q['username'],'password':q['password']})
-
         return {'result':output}
 
 
@@ -37,8 +34,6 @@ class RemUser(Resource):
     def delete(self,username):
         user = mongo.db.user
         q = user.find_one({'username':username})
-        # print(q)
-
         if q:
             user.delete_one({'_id':q['_id']})
             output = 'Deleted Successfully!'
