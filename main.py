@@ -1,8 +1,6 @@
 from flask import Flask, jsonify, request
 from flask_pymongo import PyMongo
 from flask_restful import Resource, Api
-from flask_api import status
-
 
 app = Flask(__name__)
 api = Api(app)
@@ -20,21 +18,20 @@ class AddUser(Resource):
         password = request.json['password']
 
         user_id = user.insert({'username' : username, 'password' : password})
+        
         new_user = user.find_one({'_id' : user_id})
+        output = {'username' : new_user['username'], 'password' : new_user['password']}
+        return output
 
-        # output = {'username' : new_user['username'], 'password' : new_user['password']}
-
-        return {}
 
     def get(self):
         user = mongo.db.user
-
         output = []
-
         for q in user.find():
             output.append({'username':q['username'],'password':q['password']})
 
-        return jsonify({'result':output})
+        return {'result':output}
+
 
 class RemUser(Resource):
     def delete(self,username):
@@ -44,7 +41,7 @@ class RemUser(Resource):
 
         if q:
             user.delete_one({'_id':q['_id']})
-            output = {}
+            output = 'Deleted Successfully!'
         else:
             output = 'ERROR! RETURN APPROPRIATE ERROR CODE!!'
 
