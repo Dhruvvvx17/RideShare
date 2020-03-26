@@ -42,8 +42,8 @@ class RemUser(Resource):
         return output
 
 
-api.add_resource(AddUser,'/user')
-api.add_resource(RemUser,'/user/<username>')
+api.add_resource(AddUser,'/users')
+api.add_resource(RemUser,'/users/<username>')
 
 if __name__ == '__main__':
     app.run(debug=True)
