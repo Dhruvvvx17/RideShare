@@ -1,6 +1,7 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, json
 from flask_pymongo import PyMongo
 from flask_restful import Resource, Api
+import requests
 
 app = Flask(__name__)
 api = Api(app)
@@ -12,16 +13,20 @@ mongo = PyMongo(app)
 
 class AddUser(Resource):
     
+    # API 1
     def put(self):
-        user = mongo.db.user 
+
         username = request.json['username']
         password = request.json['password']
-        user_id = user.insert({'username' : username, 'password' : password})
-        new_user = user.find_one({'_id' : user_id})
-        output = {'username' : new_user['username'], 'password' : new_user['password']}
-        return output
+        details = {'username' : username, 'password' : password, 'apiNo' : 1}
+        uri = 'http://127.0.0.1:5000/DbWrite'
 
+        dbResponse = requests.post(uri,data=json.dumps(details)) #data is a JSON
+        #dbResponse contains response code eg 200 OK
+        print(dbResponse.json())
+        return dbResponse.json()
 
+   # Temp api to list all users
     def get(self):
         user = mongo.db.user
         output = []
@@ -31,6 +36,8 @@ class AddUser(Resource):
 
 
 class RemUser(Resource):
+
+    #API 2
     def delete(self,username):
         user = mongo.db.user
         q = user.find_one({'username':username})
@@ -41,9 +48,35 @@ class RemUser(Resource):
             output = 'ERROR! RETURN APPROPRIATE ERROR CODE!!'
         return output
 
+class DbWrite(Resource):
+    def post(self):
+        # print("HELLO!!!!!")
+        details = request.get_json(force=True)
+        # print(details)
+        apiNo = details['apiNo']
+        # print(apiNo)
+        if apiNo == 1:
+            username = details['username']
+            password = details['password']
+            # print("HELLO!!")
+            # print(username)
+            # print(password)
+            user = mongo.db.user 
+            user_id = user.insert({'username' : username, 'password' : password})
+            new_user = user.find_one({'_id' : user_id})
+            output = {'username' : new_user['username'], 'password' : new_user['password']}
+            # print(output)
+            print(output)
+            return jsonify(output)
+# class DbRead(Resource):
+#     def get(self):        #NEED TO CHECK IF GET OR POST
+        
+
 
 api.add_resource(AddUser,'/users')
 api.add_resource(RemUser,'/users/<username>')
+api.add_resource(DbWrite,'/DbWrite')
+# api.add_resource(DbRead,'/DbRead')
 
 if __name__ == '__main__':
     app.run(debug=True)
