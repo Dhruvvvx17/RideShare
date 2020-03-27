@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request
 from flask_pymongo import PyMongo
 from flask_restful import Resource, Api
 from constants import locations
+from bson.objectid import ObjectId
 
 app = Flask(__name__)
 api = Api(app)
@@ -11,7 +12,7 @@ app.config['MONGO_URI'] = 'mongodb://localhost:27017/rides'
 
 mongo = PyMongo(app)
 
-class AddRide(Resource):
+class Add_or_GetRide(Resource):
 
     def post(self):
         ride = mongo.db.ride
@@ -38,8 +39,28 @@ class AddRide(Resource):
 
         return {"result":output}
 
-api.add_resource(AddRide,'/rides')
-# api.add_resource(AddRide,'/rides?source=<source>&destination=<destination>')
+
+class GetSpecificRide(Resource):
+
+    def get(self,rideID):
+        ride = mongo.db.ride
+        print(str(rideID))
+        if(len(str(rideID))!=24):
+            return "Invalid ride ID"
+        query = ride.find_one({'_id': ObjectId(rideID)})
+        if query:
+            output = {}
+            output['_id'] = str(query['_id'])
+            output['created_by'] = query['created_by']
+            output['timestamp'] = query['timestamp']
+            output['source'] = query['source']
+            output['destination'] = query['destination']
+            return output
+        else:
+            return "No such ride exists"
+
+api.add_resource(Add_or_GetRide,'/rides')
+api.add_resource(GetSpecificRide,'/rides/<rideID>')
 
 if __name__ == '__main__':
     app.run(debug=True)
