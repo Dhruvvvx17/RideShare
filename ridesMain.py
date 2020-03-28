@@ -59,16 +59,16 @@ class GetSpecificRide(Resource):
         else:
             return "No such ride exists"
 
-class DbWrite(Resource):
-    def post:
+# class DbWrite(Resource):
+#     def post:
 
-class DbRead(Resource):
-    def get:
+# class DbRead(Resource):
+#     def get:
 
 api.add_resource(Add_or_GetRide,'/rides')
 api.add_resource(GetSpecificRide,'/rides/<rideID>')
-api.add_resource(Add_or_GetRide,'/DbWrite')
-api.add_resource(Add_or_GetRide,'/DbRead')
+# api.add_resource(Add_or_GetRide,'/DbWrite')
+# api.add_resource(Add_or_GetRide,'/DbRead')
 
 if __name__ == '__main__':
     app.run(debug=True)
