@@ -50,21 +50,12 @@ class GlobalRidesAPI(Resource):
 class SpecificRidesAPI(Resource):
     # MAIN API 5 - GET INFO ABOUT A SPECIFIC RIDE
     def get(self,rideID):
-        ride = mongo.db.ride
-        print(str(rideID))
         if(len(str(rideID))!=24):
             return "Invalid ride ID"
-        query = ride.find_one({'_id': ObjectId(rideID)})
-        if query:
-            output = {}
-            output['_id'] = str(query['_id'])
-            output['created_by'] = query['created_by']
-            output['timestamp'] = query['timestamp']
-            output['source'] = query['source']
-            output['destination'] = query['destination']
-            return output
-        else:
-            return "No such ride exists"
+        details = {'_id':rideID, 'apiNo': 5}
+        uri = 'http://127.0.0.1:5000/rides/DbRead'
+        dbResponse = requests.post(uri,data=json.dumps(details)).json()
+        return dbResponse
 
     # MAIN API 6 - JOIN AN EXISTING RIDE
 
@@ -83,8 +74,7 @@ class DbWrite(Resource):
             ride_id = ride.insert({'created_by':created_by,'timestamp':timestamp,'source':source,'destination':destination})
             new_ride = ride.find_one({'_id':ride_id})
             output = {'created_by': new_ride['created_by'], 'timestamp': new_ride['timestamp'], 'source' : new_ride['source'], 'destination' : new_ride['destination'] }
-        return jsonify(output)
-
+            return jsonify(output) 
 
 
 class DbRead(Resource):
@@ -100,7 +90,22 @@ class DbRead(Resource):
             output = []
             for row in results:
                 output.append({'rideID':str(row['_id']),'created_by':row['created_by'],'timestamp':row['timestamp']})
-            return output  
+            return output
+
+        elif apiNo == 5:
+            ride_id = details['_id']
+            query = ride.find_one({'_id': ObjectId(ride_id)})
+            if query:
+                output = {}
+                output['_id'] = str(query['_id'])
+                output['created_by'] = query['created_by']
+                output['timestamp'] = query['timestamp']
+                output['source'] = query['source']
+                output['destination'] = query['destination']
+                return output
+            else:
+                return "No such ride exists"
+  
 
 
 
