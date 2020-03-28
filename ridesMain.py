@@ -45,8 +45,6 @@ class GlobalRidesAPI(Resource):
         dbResponse = requests.post(uri,data=json.dumps(details)).json()
         return dbResponse
 
-
-
 class SpecificRidesAPI(Resource):
     # MAIN API 5 - GET INFO ABOUT A SPECIFIC RIDE
     def get(self,rideID):
@@ -58,8 +56,32 @@ class SpecificRidesAPI(Resource):
         return dbResponse
 
     # MAIN API 6 - JOIN AN EXISTING RIDE
+    def post(self,rideID):
+        if(len(str(rideID))!=24):
+            return "Invalid ride ID"
+        username = request.json['username'] # Username of the user who is trying to join the ride
+        user = userDB.db.user
+        exists = user.find_one({'username':username})
+        if not exists:
+            return "User does not exists"
+        details = {'username':username,'rideID':rideID,'apiNo': 6}
+        uri = 'http://127.0.0.1:5000/rides/DbRead'
+        dbResponse = requests.post(uri,data=json.dumps(details)).json()
+        return dbResponse
 
     # MAIN API 7 - DELETE A RIDE
+    def delete(self,rideID):
+        ride = mongo.db.ride
+        details = {'_id':rideID,'apiNo':7}
+        uri = 'http://127.0.0.1:5000/rides/DbRead'
+        rid = requests.post(uri,data=json.dumps(details)).json()['_id']
+        print(rid)
+        if (rid == -1):
+            output = "Ride does not exist"
+        else:
+            ride.delete_one({'_id':ObjectId(rid)})
+            output = 'Deleted Successfully!'
+        return output
 
 class DbWrite(Resource):
     def post(self):
@@ -71,8 +93,8 @@ class DbWrite(Resource):
             timestamp = details['timestamp']
             source = details['source'] 
             destination = details['destination']
-            ride_id = ride.insert({'created_by':created_by,'timestamp':timestamp,'source':source,'destination':destination})
-            new_ride = ride.find_one({'_id':ride_id})
+            rideID = ride.insert({'created_by':created_by,'timestamp':timestamp,'source':source,'destination':destination,'users':[]})
+            new_ride = ride.find_one({'_id':rideID})
             output = {'created_by': new_ride['created_by'], 'timestamp': new_ride['timestamp'], 'source' : new_ride['source'], 'destination' : new_ride['destination'] }
             return jsonify(output) 
 
@@ -93,8 +115,8 @@ class DbRead(Resource):
             return output
 
         elif apiNo == 5:
-            ride_id = details['_id']
-            query = ride.find_one({'_id': ObjectId(ride_id)})
+            rideID = details['_id']
+            query = ride.find_one({'_id': ObjectId(rideID)})
             if query:
                 output = {}
                 output['_id'] = str(query['_id'])
@@ -102,11 +124,32 @@ class DbRead(Resource):
                 output['timestamp'] = query['timestamp']
                 output['source'] = query['source']
                 output['destination'] = query['destination']
+                output['users'] = query['users']
                 return output
             else:
                 return "No such ride exists"
   
+        elif apiNo == 6:
+            rideID = details['rideID']
+            username = details['username']
+            query = ride.find_one({'_id': ObjectId(rideID)})
+            if query:   
+                users = query['users']
+                users.append(username)
+                ride.find_one_and_update({'_id':ObjectId(rideID)},{'$set':{'users':users}},upsert=False)
+                return "User Added"
+            else:
+                return "Ride does not exist"
 
+        elif apiNo == 7:
+            rideID = details['_id']
+            #rideID is coming in as a string, thus we typecast it to ObjectID to access it
+            query = ride.find_one({'_id':ObjectId(rideID)})
+            if not query:
+                resp = {'_id': -1}
+            else:
+                resp = {'_id' : str(query['_id'])}
+            return jsonify(resp)
 
 
 api.add_resource(GlobalRidesAPI,'/rides')

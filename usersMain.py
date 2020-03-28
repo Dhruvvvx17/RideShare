@@ -65,7 +65,6 @@ class DbWrite(Resource):
             output = {'username' : new_user['username'], 'password' : new_user['password']}
             return jsonify(output)
 
-
 class DbRead(Resource):
     # DB READ API
     def post(self):
