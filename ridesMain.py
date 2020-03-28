@@ -1,47 +1,54 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, json
 from flask_pymongo import PyMongo
 from flask_restful import Resource, Api
 from constants import locations
 from bson.objectid import ObjectId
+import requests
 
 app = Flask(__name__)
 api = Api(app)
 
 app.config['MONGO_DBNAME'] = 'rides'
 app.config['MONGO_URI'] = 'mongodb://localhost:27017/rides'
+# UserDB used in API 4
+userDB = PyMongo(app, uri = 'mongodb://localhost:27017/users')
 
 mongo = PyMongo(app)
 
-class Add_or_GetRide(Resource):
 
+
+class GlobalRidesAPI(Resource):
+    # MAIN API 3 - CREATE RIDE
     def post(self):
-        ride = mongo.db.ride
         created_by = request.json['created_by'] 
         timestamp = request.json['timestamp']
         source = request.json['source'] 
         destination = request.json['destination']
+        user = userDB.db.user
+        exists = user.find_one({'username':created_by})
+        if not exists:
+            return "User does not exists"
         if(source in locations.keys() and destination in locations.keys()):
-            ride_id = ride.insert({'created_by': created_by, 'timestamp': timestamp, 'source':source,'destination':destination})
-            new_ride = ride.find_one({'_id':ride_id})
-            output = {'created_by':new_ride['created_by'], 'timestamp':new_ride['timestamp'], 'source':new_ride['source'], 'destination':new_ride['destination']}
-            return output        
+            details = {'created_by': created_by, 'timestamp': timestamp, 'source':source,'destination':destination,'apiNo':3}
+            uri = 'http://127.0.0.1:5000/rides/DbWrite'
+            dbResponse = requests.post(uri,data=json.dumps(details)).json()
+            return dbResponse
         else:
             return "Invalid source or destination"
 
+    # MAIN API 4 - LIST RIDE FOR GIVEN SOURCE & DESTINATION
     def get(self):
-        ride = mongo.db.ride
         source = request.args.get('source')
         destination = request.args.get('destination')
-        print(source,destination)
-        output = []
-        for query in ride.find({'source': int(source), 'destination': int(destination)}):
-            output.append({'rideID':str(query['_id']),'created_by':query['created_by'],'timestamp':query['timestamp']})
-
-        return {"result":output}
+        details = {'source': int(source), 'destination': int(destination), 'apiNo':4}
+        uri = 'http://127.0.0.1:5000/rides/DbRead'
+        dbResponse = requests.post(uri,data=json.dumps(details)).json()
+        return dbResponse
 
 
-class GetSpecificRide(Resource):
 
+class SpecificRidesAPI(Resource):
+    # MAIN API 5 - GET INFO ABOUT A SPECIFIC RIDE
     def get(self,rideID):
         ride = mongo.db.ride
         print(str(rideID))
@@ -59,16 +66,48 @@ class GetSpecificRide(Resource):
         else:
             return "No such ride exists"
 
-# class DbWrite(Resource):
-#     def post:
+    # MAIN API 6 - JOIN AN EXISTING RIDE
 
-# class DbRead(Resource):
-#     def get:
+    # MAIN API 7 - DELETE A RIDE
 
-api.add_resource(Add_or_GetRide,'/rides')
-api.add_resource(GetSpecificRide,'/rides/<rideID>')
-# api.add_resource(Add_or_GetRide,'/DbWrite')
-# api.add_resource(Add_or_GetRide,'/DbRead')
+class DbWrite(Resource):
+    def post(self):
+        ride = mongo.db.ride
+        details = request.get_json(force=True)
+        apiNo = details['apiNo']
+        if apiNo == 3:
+            created_by = details['created_by'] 
+            timestamp = details['timestamp']
+            source = details['source'] 
+            destination = details['destination']
+            ride_id = ride.insert({'created_by':created_by,'timestamp':timestamp,'source':source,'destination':destination})
+            new_ride = ride.find_one({'_id':ride_id})
+            output = {'created_by': new_ride['created_by'], 'timestamp': new_ride['timestamp'], 'source' : new_ride['source'], 'destination' : new_ride['destination'] }
+        return jsonify(output)
+
+
+
+class DbRead(Resource):
+    def post(self):
+        ride = mongo.db.ride
+        details = request.get_json(force=True)
+        apiNo = details['apiNo']
+        if apiNo == 4:
+            source = details['source']
+            destination = details['destination']
+            results = ride.find({'source': source, 'destination': destination})
+            print(results)
+            output = []
+            for row in results:
+                output.append({'rideID':str(row['_id']),'created_by':row['created_by'],'timestamp':row['timestamp']})
+            return output  
+
+
+
+api.add_resource(GlobalRidesAPI,'/rides')
+api.add_resource(SpecificRidesAPI,'/rides/<rideID>')
+api.add_resource(DbWrite,'/rides/DbWrite')
+api.add_resource(DbRead,'/rides/DbRead')
 
 if __name__ == '__main__':
     app.run(debug=True)

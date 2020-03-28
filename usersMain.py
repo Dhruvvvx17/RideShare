@@ -15,16 +15,16 @@ mongo = PyMongo(app)
 
 
 class AddUser(Resource):
-    # MAIN API 1
+    # MAIN API 1 - ADD USER
     def put(self):
         username = request.json['username']
         password = request.json['password']
         details = {'username' : username, 'password' : password, 'apiNo' : 1}
         uri = 'http://127.0.0.1:5000/users/DbWrite'
-        dbResponse = requests.post(uri,data=json.dumps(details))
-        return dbResponse.json()
+        dbResponse = requests.post(uri,data=json.dumps(details)).json()
+        return dbResponse
 
-    # TEMP API 1
+    # TEMP API 1 - LIST ALL USERS
     def get(self):
         user = mongo.db.user
         output = []
@@ -35,7 +35,7 @@ class AddUser(Resource):
 
 
 class RemUser(Resource):
-    # MAIN API 2
+    # MAIN API 2 - DELETE USER
     def delete(self,username):
         user = mongo.db.user
         details = {'username':username,'apiNo':2}
