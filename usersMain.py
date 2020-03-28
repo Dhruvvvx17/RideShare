@@ -50,24 +50,17 @@ class RemUser(Resource):
 
 class DbWrite(Resource):
     def post(self):
-        # print("HELLO!!!!!")
         details = request.get_json(force=True)
-        # print(details)
         apiNo = details['apiNo']
-        # print(apiNo)
         if apiNo == 1:
             username = details['username']
             password = details['password']
-            # print("HELLO!!")
-            # print(username)
-            # print(password)
             user = mongo.db.user 
             user_id = user.insert({'username' : username, 'password' : password})
             new_user = user.find_one({'_id' : user_id})
             output = {'username' : new_user['username'], 'password' : new_user['password']}
-            # print(output)
-            print(output)
             return jsonify(output)
+
 # class DbRead(Resource):
 #     def get(self):        #NEED TO CHECK IF GET OR POST
         
