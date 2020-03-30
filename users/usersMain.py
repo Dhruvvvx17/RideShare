@@ -87,4 +87,4 @@ api.add_resource(DbWrite,'/users/DbWrite')
 api.add_resource(DbRead,'/users/DbRead')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(port=8080, debug=True)
