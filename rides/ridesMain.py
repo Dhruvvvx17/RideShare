@@ -158,4 +158,4 @@ api.add_resource(DbWrite,'/rides/DbWrite')
 api.add_resource(DbRead,'/rides/DbRead')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(port=8000, debug=True)

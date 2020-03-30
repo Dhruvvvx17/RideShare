@@ -1,0 +1,21 @@
+version: '3'
+services:
+    rides:
+        build:
+            context: rides
+            dockerfile: Dockerfile
+        container_name: ridecontainer
+        ports:
+            - "80:8000" # host:container
+        expose: 
+            - "8000"
+        # volumes:
+        #  - .:/project
+        depends_on:
+            - ridesdb
+    ridesdb:
+        image: "mongo"
+        container_name: mongorides
+        command: mongod
+        expose:
+            - "27017"
