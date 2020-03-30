@@ -30,7 +30,7 @@ class GlobalRidesAPI(Resource):
             return "User does not exists"
         if(source in locations.keys() and destination in locations.keys()):
             details = {'created_by': created_by, 'timestamp': timestamp, 'source':source,'destination':destination,'apiNo':3}
-            uri = 'http://127.0.0.1:5000/rides/DbWrite'
+            uri = 'http://127.0.0.1:8000/rides/DbWrite'
             dbResponse = requests.post(uri,data=json.dumps(details)).json()
             return dbResponse
         else:
@@ -41,7 +41,7 @@ class GlobalRidesAPI(Resource):
         source = request.args.get('source')
         destination = request.args.get('destination')
         details = {'source': int(source), 'destination': int(destination), 'apiNo':4}
-        uri = 'http://127.0.0.1:5000/rides/DbRead'
+        uri = 'http://127.0.0.1:8000/rides/DbRead'
         dbResponse = requests.post(uri,data=json.dumps(details)).json()
         return dbResponse
 
@@ -51,7 +51,7 @@ class SpecificRidesAPI(Resource):
         if(len(str(rideID))!=24):
             return "Invalid ride ID"
         details = {'_id':rideID, 'apiNo': 5}
-        uri = 'http://127.0.0.1:5000/rides/DbRead'
+        uri = 'http://127.0.0.1:8000/rides/DbRead'
         dbResponse = requests.post(uri,data=json.dumps(details)).json()
         return dbResponse
 
@@ -65,7 +65,7 @@ class SpecificRidesAPI(Resource):
         if not exists:
             return "User does not exists"
         details = {'username':username,'rideID':rideID,'apiNo': 6}
-        uri = 'http://127.0.0.1:5000/rides/DbRead'
+        uri = 'http://127.0.0.1:8000/rides/DbRead'
         dbResponse = requests.post(uri,data=json.dumps(details)).json()
         return dbResponse
 
@@ -73,7 +73,7 @@ class SpecificRidesAPI(Resource):
     def delete(self,rideID):
         ride = mongo.db.ride
         details = {'_id':rideID,'apiNo':7}
-        uri = 'http://127.0.0.1:5000/rides/DbRead'
+        uri = 'http://127.0.0.1:8000/rides/DbRead'
         rid = requests.post(uri,data=json.dumps(details)).json()['_id']
         print(rid)
         if (rid == -1):
