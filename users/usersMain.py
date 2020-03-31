@@ -20,7 +20,7 @@ class AddUser(Resource):
         username = request.json['username']
         password = request.json['password']
         details = {'username' : username, 'password' : password, 'apiNo' : 1}
-        uri = 'http://127.0.0.1:5000/users/DbWrite'
+        uri = 'http://127.0.0.1:8080/users/DbWrite'
         dbResponse = requests.post(uri,data=json.dumps(details)).json()
         return dbResponse
 
@@ -39,7 +39,7 @@ class RemUser(Resource):
     def delete(self,username):
         user = mongo.db.user
         details = {'username':username,'apiNo':2}
-        uri = 'http://127.0.0.1:5000/users/DbRead'
+        uri = 'http://127.0.0.1:8080/users/DbRead'
         uid = requests.post(uri,data=json.dumps(details)).json()['_id']
         print(uid)
         if (uid == -1):
@@ -64,6 +64,7 @@ class DbWrite(Resource):
             new_user = user.find_one({'_id' : user_id})
             output = {'username' : new_user['username'], 'password' : new_user['password']}
             return jsonify(output)
+
 
 class DbRead(Resource):
     # DB READ API
