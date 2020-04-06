@@ -4,33 +4,35 @@ from flask_restful import Resource, Api
 from constants import locations
 from bson.objectid import ObjectId
 import requests
+from pymongo import MongoClient
 
 app = Flask(__name__)
 api = Api(app)
 
-app.config['MONGO_DBNAME'] = 'rides'
-app.config['MONGO_URI'] = 'mongodb://localhost:27017/rides'
+#app.config['MONGO_DBNAME'] = 'rides'
+#app.config['MONGO_URI'] = 'mongodb://localhost:27017/rides'
 # UserDB used in API 4
-userDB = PyMongo(app, uri = 'mongodb://localhost:27017/users')
+#userDB = PyMongo(app, uri = 'mongodb://localhost:27017/users')
+#mongo = PyMongo(app)
 
-mongo = PyMongo(app)
-
-
+ridedb = MongoClient('mongodb://ridedb:27018/').rides
+userdb = MongoClient('mongodb://userdb:27017/').users
 
 class GlobalRidesAPI(Resource):
     # MAIN API 3 - CREATE RIDE
     def post(self):
-        created_by = request.json['created_by'] 
+        created_by = request.json['created_by']
         timestamp = request.json['timestamp']
-        source = request.json['source'] 
+        source = request.json['source']
         destination = request.json['destination']
-        user = userDB.db.user
+        user = userdb.user
+        #ref var = database.collenction_name
         exists = user.find_one({'username':created_by})
         if not exists:
             return "User does not exists"
         if(source in locations.keys() and destination in locations.keys()):
             details = {'created_by': created_by, 'timestamp': timestamp, 'source':source,'destination':destination,'apiNo':3}
-            uri = 'http://127.0.0.1:8000/rides/DbWrite'
+            uri = 'http://rides:8000/rides/DbWrite'
             dbResponse = requests.post(uri,data=json.dumps(details)).json()
             return dbResponse
         else:
@@ -41,7 +43,7 @@ class GlobalRidesAPI(Resource):
         source = request.args.get('source')
         destination = request.args.get('destination')
         details = {'source': int(source), 'destination': int(destination), 'apiNo':4}
-        uri = 'http://127.0.0.1:8000/rides/DbRead'
+        uri = 'http://rides:8000/rides/DbRead'
         dbResponse = requests.post(uri,data=json.dumps(details)).json()
         return dbResponse
 
@@ -51,7 +53,7 @@ class SpecificRidesAPI(Resource):
         if(len(str(rideID))!=24):
             return "Invalid ride ID"
         details = {'_id':rideID, 'apiNo': 5}
-        uri = 'http://127.0.0.1:8000/rides/DbRead'
+        uri = 'http://rides:8000/rides/DbRead'
         dbResponse = requests.post(uri,data=json.dumps(details)).json()
         return dbResponse
 
@@ -60,20 +62,20 @@ class SpecificRidesAPI(Resource):
         if(len(str(rideID))!=24):
             return "Invalid ride ID"
         username = request.json['username'] # Username of the user who is trying to join the ride
-        user = userDB.db.user
+        user = userdb.user
         exists = user.find_one({'username':username})
         if not exists:
             return "User does not exists"
         details = {'username':username,'rideID':rideID,'apiNo': 6}
-        uri = 'http://127.0.0.1:8000/rides/DbRead'
+        uri = 'http://rides:8000/rides/DbRead'
         dbResponse = requests.post(uri,data=json.dumps(details)).json()
         return dbResponse
 
     # MAIN API 7 - DELETE A RIDE
     def delete(self,rideID):
-        ride = mongo.db.ride
+        ride = ridedb.ride
         details = {'_id':rideID,'apiNo':7}
-        uri = 'http://127.0.0.1:8000/rides/DbRead'
+        uri = 'http://rides:8000/rides/DbRead'
         rid = requests.post(uri,data=json.dumps(details)).json()['_id']
         print(rid)
         if (rid == -1):
@@ -85,7 +87,7 @@ class SpecificRidesAPI(Resource):
 
 class DbWrite(Resource):
     def post(self):
-        ride = mongo.db.ride
+        ride = ridedb.ride
         details = request.get_json(force=True)
         apiNo = details['apiNo']
         if apiNo == 3:
@@ -101,7 +103,7 @@ class DbWrite(Resource):
 
 class DbRead(Resource):
     def post(self):
-        ride = mongo.db.ride
+        ride = ridedb.ride
         details = request.get_json(force=True)
         apiNo = details['apiNo']
         if apiNo == 4:
@@ -158,4 +160,4 @@ api.add_resource(DbWrite,'/rides/DbWrite')
 api.add_resource(DbRead,'/rides/DbRead')
 
 if __name__ == '__main__':
-    app.run(port=8000, debug=True)
+    app.run(host="0.0.0.0", port=8000, debug=True)

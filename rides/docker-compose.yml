@@ -1,21 +1,28 @@
 version: '3'
+
 services:
     rides:
-        build:
-            context: rides
-            dockerfile: Dockerfile
-        container_name: ridecontainer
-        ports:
-            - "80:8000" # host:container
-        expose: 
-            - "8000"
-        # volumes:
-        #  - .:/project
-        depends_on:
-            - ridesdb
-    ridesdb:
-        image: "mongo"
-        container_name: mongorides
-        command: mongod
+        container_name: rides
+        image: rides:latest
+        build: "./rideapp"
+        ports: 
+            - '8000:8000'
+            # host:container
         expose:
-            - "27017"
+            - "8000"
+        depends_on:
+            - ridedb
+        networks:
+            - users_ridesharenet
+
+    ridedb:
+        container_name: ridedb
+        build: "./mongodb"
+        ports:
+            - '27018:27017'
+        networks:
+            - users_ridesharenet
+
+networks:
+    users_ridesharenet:
+            external: true
