@@ -1,30 +1,33 @@
 version: '3'
 services:
+
     users:
         container_name: users
         image: users:latest
-        build: 
-            context: ./userapp
+       
+        build: "./userapp" 
+     
         ports:
-            - "8080:8080" # host:container
+            - '8080:8080'
+        # host:container
         expose:
             - "8080"
         depends_on:
-            - usersdb
+            - userdb
         networks:
             - ridesharenet
-    usersdb:
+
+    userdb:
         # not pulling the actual mongo image here. look in docker file
-        container_name: usersdb
-        image: usersdb:latest
-        build:
-            context: ./mongodb
-        volumes:
-            - ./mongodb/db:/data/db
+        container_name: userdb
+        
+        build: "./mongodb"
+
         ports:
-            - 27017
+            - '27017:27017'
         networks:
             - ridesharenet
+
 networks:
         ridesharenet:
             driver: bridge

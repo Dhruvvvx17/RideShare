@@ -1,4 +1,6 @@
-FROM mongo:latest
-ENV TEAM_NAME = CC_186_281
-CMD ["mongod"]
 
+FROM mongo:latest
+
+EXPOSE 27017
+
+CMD ["mongod"]
