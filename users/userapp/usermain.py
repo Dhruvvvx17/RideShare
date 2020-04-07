@@ -8,18 +8,13 @@ from flask import Response
 import re
 
 app = Flask(__name__)
-#from userflask import app
 api = Api(app)
-
-#app.config['MONGO_DBNAME'] = 'users'
-#app.config['MONGO_URI'] = 'mongodb://usersdb:27017'
 
 db = MongoClient('mongodb://userdb:27017/').users
 uriWrite = 'http://users:8080/users/DbWrite'
 uriRead = 'http://users:8080/users/DbRead'
 
 def insertHelp(allDetails):
-    # dbResponse = requests.post(uriWrite,data=json.dumps(allDetails)).json()
     dbResponse = requests.post(uriWrite,data=json.dumps(allDetails))
     return dbResponse 
 
@@ -30,7 +25,6 @@ def readHelp(allDetails):
 def deleteHelp(allDetails):
     dbResponse = requests.post(uriWrite,data=json.dumps(allDetails))
     return dbResponse
-
 
 class AddUser(Resource):
     # MAIN API 1 - ADD USER
@@ -66,7 +60,6 @@ class AddUser(Resource):
         except:
             return Response("",status=500,mimetype='application/json')
 
-
     # TEMP API 1 - LIST ALL USERS
     def get(self):
         user = db.user
@@ -74,8 +67,6 @@ class AddUser(Resource):
         for q in user.find():
             output.append({'username':q['username'],'password':q['password']})
         return {'result':output}
-
-
 
 class RemUser(Resource):
     # MAIN API 2 - DELETE USER
@@ -98,9 +89,6 @@ class RemUser(Resource):
                 return Response("{}", status=200, mimetype="application/json")
             else:
                 return Response("",status=500,mimetype='application/json')
-        # except:
-            # return Response("",status=500,mimetype='application/json')
-
 
 class DbWrite(Resource):
     # DB WRITE API
@@ -118,11 +106,7 @@ class DbWrite(Resource):
             # try:
                 user.delete_one(allDetails['details'])
                 return jsonify({'result' : 200})
-            # except:
-            #     return jsonify({'result' : 500}) 
-
-                
-
+ 
 class DbRead(Resource):
     # DB READ API
     def post(self):
@@ -132,14 +116,11 @@ class DbRead(Resource):
         # allDetails has {{username:username},method}
         method = allDetails['method']
         if method == "readOne":
-            query = user.find_one(temp)
-            # temp has ('username':username)
-            # user_id = query['_id']
+            query = user.find_one(temp) # temp has ('username':username)
             if query:    # new user, can be added
                 return jsonify({"result":1}) # already existing user
             else: 
                 return jsonify({"result":0}) # user does not exist
-
 
 api.add_resource(AddUser,'/users')
 api.add_resource(RemUser,'/users/<username>')
