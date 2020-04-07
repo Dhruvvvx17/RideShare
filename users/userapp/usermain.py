@@ -19,7 +19,6 @@ uriWrite = 'http://users:8080/users/DbWrite'
 uriRead = 'http://users:8080/users/DbRead'
 
 def insertHelp(allDetails):
-
     # dbResponse = requests.post(uriWrite,data=json.dumps(allDetails)).json()
     dbResponse = requests.post(uriWrite,data=json.dumps(allDetails))
     return dbResponse 
@@ -33,32 +32,35 @@ class AddUser(Resource):
     # MAIN API 1 - ADD USER
     def put(self):
         try:
-            username = request.json['username']
-            password = request.json['password']
+            try:
+                username = request.json['username']
+                password = request.json['password']
+            except:
+                return Response("Invalid Input JSON",status=400,mimetype='application/json')
+                # NEED TO CHECK PWS HERE -> 40 (5) chars, hex symbols only
+                # if not re.match("([a-fA-F0-9]{5})",password):
 
+            if not len(password) == 5:
+                return Response("Invalid Password!",status=400,mimetype='application/json')
+
+            #CHECKING IF USER ALREADY EXISTS
+            temp = {'username' : username}
+            temp = json.dumps(temp)
+            allTemp = {'temp':temp,'method':'readOne'}
+            dbResponse = readHelp(allTemp) # contains either {'result':0} or {'result':1}
+            if dbResponse.json()["result"] == 1:
+                return Response("User already exists!",status=400,mimetype='application/json')
+
+            details = {'username' : username, 'password' : password}
+            allDetails = {"details": details, "method":"insert"}
+
+            dbResponse = insertHelp(allDetails)  # all deatils -> { {uswrname, pws}, method }
+            if dbResponse.json()['result'] == 201:
+                return Response("{}", status=201, mimetype="application/json")
+            else:
+                return Response("",status=500,mimetype='application/json')
         except:
-            return Response("Invalid Input JSON",status=400,mimetype='application/json')
-            # NEED TO CHECK PWS HERE -> 40 (5) chars, hex symbols only
-            # if not re.match("([a-fA-F0-9]{5})",password):
-
-        if not len(password) == 5:
-            return Response("Invalid Password!",status=400,mimetype='application/json')
-
-        #CHECKING IF USER ALREADY EXISTS
-        temp = {'username' : username}
-        allTemp = {'temp':temp,'method':'readOne'}
-        dbResponse = readHelp(allTemp).json # contains either {'result':0} or {'result':1}
-        if dbResponse == {'result':1}:
-            return Response("User already exists!",status=400,mimetype='application/json')
-
-        details = {'username' : username, 'password' : password}
-        allDetails = {"details": details, "method":"insert"}
-
-        dbResponse = insertHelp(allDetails).json  # all deatils -> { {uswrname, pws}, method }
-        if dbResponse:
-            return Response("{}", status=201, mimetype="application/json")
-        elif dbResponse == "500":
-            return Response("",status=500,mimetype='application/json').json()
+            return Response("",status=500,mimetype='application/json')
 
 
     # TEMP API 1 - LIST ALL USERS
@@ -97,25 +99,26 @@ class DbWrite(Resource):
         if method == "insert":
             try:
                 user_id = user.insert(allDetails['details']) # details -> {uswrname, pws}
-                return jsonify({'result' : {}})
+                return jsonify({'result' : 201})
             except:
-                return "500"
+                return jsonify({'result' : 500})
 
 class DbRead(Resource):
     # DB READ API
     def post(self):
         user = db.user
         allDetails = request.get_json(force=True)
+        temp = json.loads(allDetails['temp'])
         # allDetails has {{username:username},method}
         method = allDetails['method']
         if method == "readOne":
-            query = user.find_one(allDetails['temp'])
+            query = user.find_one(temp)
             # temp has ('username':username)
             # user_id = query['_id']
-            if not query:   # new user, can be added
-                return jsonify({'result':0})
+            if query:    # new user, can be added
+                return jsonify({"result":1})
             else: 
-                return jsonify({'result':1}) # already existing user
+                return jsonify({"result":0}) # already existing user
 
 
 api.add_resource(AddUser,'/users')
