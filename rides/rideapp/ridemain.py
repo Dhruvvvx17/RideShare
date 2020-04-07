@@ -5,38 +5,74 @@ from constants import locations
 from bson.objectid import ObjectId
 import requests
 from pymongo import MongoClient
+from flask import Response
 
 app = Flask(__name__)
 api = Api(app)
 
-#app.config['MONGO_DBNAME'] = 'rides'
-#app.config['MONGO_URI'] = 'mongodb://localhost:27017/rides'
-# UserDB used in API 4
-#userDB = PyMongo(app, uri = 'mongodb://localhost:27017/users')
-#mongo = PyMongo(app)
-
 ridedb = MongoClient('mongodb://ridedb:27017/').rides
 userdb = MongoClient('mongodb://userdb:27017/').users
+
+# # for accessing the users DB
+# uriUsersWrite = 'http://users:8080/users/DbWrite'
+# uriUsersRead = 'http://users:8080/users/DbRead'
+
+# for accessing the rides DB
+uriWrite = 'http://rides:8000/rides/DbWrite'
+uriRead = 'http://rides:8000/rides/DbRead'
+
+
+def insertHelp(allDetails):
+    dbResponse = requests.post(uriWrite,data=json.dumps(allDetails))
+    return dbResponse 
+
+def readHelp(allDetails):
+
+    dbResponse = requests.post(uriRead,data=json.dumps(allDetails))
+    return dbResponse # contains either {'result':0} or {'result':1, query}
+
+
+def deleteHelp(allDetails):
+    dbResponse = requests.post(uriWrite,data=json.dumps(allDetails))
+    return dbResponse
 
 class GlobalRidesAPI(Resource):
     # MAIN API 3 - CREATE RIDE
     def post(self):
-        created_by = request.json['created_by']
-        timestamp = request.json['timestamp']
-        source = request.json['source']
-        destination = request.json['destination']
-        user = userdb.user
-        #ref var = database.collenction_name
-        exists = user.find_one({'username':created_by})
-        if not exists:
-            return "User does not exists"
-        if(source in locations.keys() and destination in locations.keys()):
-            details = {'created_by': created_by, 'timestamp': timestamp, 'source':source,'destination':destination,'apiNo':3}
-            uri = 'http://rides:8000/rides/DbWrite'
-            dbResponse = requests.post(uri,data=json.dumps(details)).json()
-            return dbResponse
-        else:
-            return "Invalid source or destination"
+        # try:
+            
+            user = userdb.user # user here is a Object of type collection, which isn't JSON serializable
+            ride = ridedb.ride
+            try:
+                created_by = request.json['created_by']
+                timestamp = request.json['timestamp']
+                source = request.json['source']
+                destination = request.json['destination']
+            except:
+                return Response("Invalid Input JSON",status=400,mimetype='application/json')
+            details = {'username':created_by}
+            allDetails = {'details':details, 'method':'readOne', 'collection': 'user'}
+            dbResponse = readHelp(allDetails) # contains either {'result':0} or {'result':1, query}
+            
+            
+            if dbResponse.json()["result"] == 0:
+                
+                
+                
+                return Response("User doesn't exists!",status=400,mimetype='application/json')
+            
+            if(source in locations.keys() and destination in locations.keys()):
+                details = {'created_by': created_by, 'timestamp': timestamp, 'source':source,'destination':destination}
+                allDetails = {'details':details, 'method':'insert', 'collection':'ride', 'users':[]}
+                dbResponse = insertHelp(allDetails)
+                if dbResponse.json()['result'] == 201:
+                    return Response("{}", status=201, mimetype="application/json")
+                else:
+                    return Response("",status=500,mimetype='application/json')
+            else:
+                return Response("Invalid source or destination",status=400,mimetype='application/json')
+        # except:
+        #     return Response("",status=500,mimetype='application/json')
 
     # MAIN API 4 - LIST RIDE FOR GIVEN SOURCE & DESTINATION
     def get(self):
@@ -87,23 +123,42 @@ class SpecificRidesAPI(Resource):
 
 class DbWrite(Resource):
     def post(self):
-        ride = ridedb.ride
-        details = request.get_json(force=True)
-        apiNo = details['apiNo']
-        if apiNo == 3:
-            created_by = details['created_by'] 
-            timestamp = details['timestamp']
-            source = details['source'] 
-            destination = details['destination']
-            rideID = ride.insert({'created_by':created_by,'timestamp':timestamp,'source':source,'destination':destination,'users':[]})
-            new_ride = ride.find_one({'_id':rideID})
-            output = {'created_by': new_ride['created_by'], 'timestamp': new_ride['timestamp'], 'source' : new_ride['source'], 'destination' : new_ride['destination'] }
-            return jsonify(output) 
-
+        
+        allDetails = request.get_json(force=True)
+        
+        collection = allDetails['collection'] # either 'user' or 'ride'
+        if collection == 'user':
+            collection = userdb.user
+        else:
+            collection = ridedb.ride
+        method = allDetails['method']
+        if method == 'insert':
+            try:
+                collection.insert(allDetails['details']) # details -> all ride details
+                return jsonify({'result' : 201})
+            except:
+                return jsonify({'result' : 500})
 
 class DbRead(Resource):
     def post(self):
-        ride = ridedb.ride
+        
+        allDetails = request.get_json(force=True)
+        collection = allDetails['collection'] # either 'user' or 'ride'
+        if collection == 'user':
+            collection = userdb.user
+        else:
+            collection = ridedb.ride
+        method = allDetails['method']
+        if method == 'readOne':
+            query = collection.find_one(allDetails['details']) # details has ('username':username)
+            if query:
+                # query = jsonify(query)
+                query['_id'] = str(query['_id'])
+                return jsonify({'result':1,'query':query})  # already existing user
+            else: # when query contains null
+                return jsonify({"result":0}) # user does not exist
+            
+        
         details = request.get_json(force=True)
         apiNo = details['apiNo']
         if apiNo == 4:
