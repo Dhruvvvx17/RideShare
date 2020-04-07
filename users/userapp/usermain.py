@@ -4,6 +4,8 @@ from flask_restful import Resource, Api
 from bson.objectid import ObjectId
 import requests
 from pymongo import MongoClient
+from flask import Response
+import re
 
 app = Flask(__name__)
 #from userflask import app
@@ -13,23 +15,54 @@ api = Api(app)
 #app.config['MONGO_URI'] = 'mongodb://usersdb:27017'
 
 db = MongoClient('mongodb://userdb:27017/').users
+uriWrite = 'http://users:8080/users/DbWrite'
+uriRead = 'http://users:8080/users/DbRead'
+
+def insertHelp(allDetails):
+
+    # dbResponse = requests.post(uriWrite,data=json.dumps(allDetails)).json()
+    dbResponse = requests.post(uriWrite,data=json.dumps(allDetails))
+    return dbResponse 
+
+def readHelp(allDetails):
+    dbResponse = requests.post(uriRead,data=json.dumps(allDetails))
+    return dbResponse # contains either {'result':0} or {'result':1}
 
 
 class AddUser(Resource):
     # MAIN API 1 - ADD USER
     def put(self):
-        username = request.json['username']
-        password = request.json['password']
-        details = {'username' : username, 'password' : password, 'apiNo' : 1}
-        uri = 'http://users:8080/users/DbWrite'
-        dbResponse = requests.post(uri,data=json.dumps(details)).json()
-        return dbResponse
+        try:
+            username = request.json['username']
+            password = request.json['password']
+
+        except:
+            return Response("Invalid Input JSON",status=400,mimetype='application/json')
+            # NEED TO CHECK PWS HERE -> 40 (5) chars, hex symbols only
+            # if not re.match("([a-fA-F0-9]{5})",password):
+
+        if not len(password) == 5:
+            return Response("Invalid Password!",status=400,mimetype='application/json')
+
+        #CHECKING IF USER ALREADY EXISTS
+        temp = {'username' : username}
+        allTemp = {'temp':temp,'method':'readOne'}
+        dbResponse = readHelp(allTemp).json # contains either {'result':0} or {'result':1}
+        if dbResponse == {'result':1}:
+            return Response("User already exists!",status=400,mimetype='application/json')
+
+        details = {'username' : username, 'password' : password}
+        allDetails = {"details": details, "method":"insert"}
+
+        dbResponse = insertHelp(allDetails).json  # all deatils -> { {uswrname, pws}, method }
+        if dbResponse:
+            return Response("{}", status=201, mimetype="application/json")
+        elif dbResponse == "500":
+            return Response("",status=500,mimetype='application/json').json()
 
 
     # TEMP API 1 - LIST ALL USERS
     def get(self):
-        #print("Hello World")
-        #return "Hello World"
         user = db.user
         output = []
         for q in user.find():
@@ -43,8 +76,7 @@ class RemUser(Resource):
     def delete(self,username):
         user = db.user
         details = {'username':username,'apiNo':2}
-        uri = 'http://users:8080/users/DbRead'
-	# users:8080 -> here users is the service 'users'
+	    # users:8080 -> here users is the service 'users'
         uid = requests.post(uri,data=json.dumps(details)).json()['_id']
         print(uid)
         if (uid == -1):
@@ -60,32 +92,30 @@ class DbWrite(Resource):
     # DB WRITE API
     def post(self):
         user = db.user
-        details = request.get_json(force=True)
-        apiNo = details['apiNo']
-        if apiNo == 1:
-            username = details['username']
-            password = details['password']
-            user_id = user.insert({'username' : username, 'password' : password})
-            new_user = user.find_one({'_id' : user_id})
-            output = {'username' : new_user['username'], 'password' : new_user['password']}
-            print(output)
-            return jsonify(output)
-
+        allDetails = request.get_json(force=True)  # all deatils -> { {uswrname, pws}, method }
+        method = allDetails['method']
+        if method == "insert":
+            try:
+                user_id = user.insert(allDetails['details']) # details -> {uswrname, pws}
+                return jsonify({'result' : {}})
+            except:
+                return "500"
 
 class DbRead(Resource):
     # DB READ API
     def post(self):
         user = db.user
-        details = request.get_json(force=True)
-        apiNo = details['apiNo']
-        if apiNo == 2:
-            username = details['username']
-            query = user.find_one({'username':username})
-            if not query:
-                resp = {'_id': -1}
-            else:
-                resp = {'_id' : str(query['_id'])}
-            return jsonify(resp)
+        allDetails = request.get_json(force=True)
+        # allDetails has {{username:username},method}
+        method = allDetails['method']
+        if method == "readOne":
+            query = user.find_one(allDetails['temp'])
+            # temp has ('username':username)
+            # user_id = query['_id']
+            if not query:   # new user, can be added
+                return jsonify({'result':0})
+            else: 
+                return jsonify({'result':1}) # already existing user
 
 
 api.add_resource(AddUser,'/users')
