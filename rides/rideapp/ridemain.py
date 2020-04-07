@@ -39,8 +39,7 @@ def deleteHelp(allDetails):
 class GlobalRidesAPI(Resource):
     # MAIN API 3 - CREATE RIDE
     def post(self):
-        # try:
-            
+        try:
             user = userdb.user # user here is a Object of type collection, which isn't JSON serializable
             ride = ridedb.ride
             try:
@@ -53,14 +52,8 @@ class GlobalRidesAPI(Resource):
             details = {'username':created_by}
             allDetails = {'details':details, 'method':'readOne', 'collection': 'user'}
             dbResponse = readHelp(allDetails) # contains either {'result':0} or {'result':1, query}
-            
-            
             if dbResponse.json()["result"] == 0:
-                
-                
-                
                 return Response("User doesn't exists!",status=400,mimetype='application/json')
-            
             if(source in locations.keys() and destination in locations.keys()):
                 details = {'created_by': created_by, 'timestamp': timestamp, 'source':source,'destination':destination}
                 allDetails = {'details':details, 'method':'insert', 'collection':'ride', 'users':[]}
@@ -71,14 +64,27 @@ class GlobalRidesAPI(Resource):
                     return Response("",status=500,mimetype='application/json')
             else:
                 return Response("Invalid source or destination",status=400,mimetype='application/json')
-        # except:
-        #     return Response("",status=500,mimetype='application/json')
+        except:
+            return Response("",status=500,mimetype='application/json')
 
     # MAIN API 4 - LIST RIDE FOR GIVEN SOURCE & DESTINATION
     def get(self):
-        source = request.args.get('source')
-        destination = request.args.get('destination')
-        details = {'source': int(source), 'destination': int(destination), 'apiNo':4}
+        try:
+            source = request.args.get('source')
+            destination = request.args.get('destination')
+        except: 
+            return Response("Invalid Input JSON",status=400,mimetype='application/json')
+        details = {'source': int(source), 'destination': int(destination)}
+        allDetails = {'details':details,'method':'readMany', 'collection':'ride'}
+        dbResponse = readHelp(allDetails)
+        if dbResponse.json()['query']:
+            listOfRides = dbResponse.json()['query']
+            # a = len(listOfRides)
+            return Response(listOfRides, status=200, mimetype='application/json')
+        else:
+            return Response([], status=204, mimetype='application/json')
+
+        
         uri = 'http://rides:8000/rides/DbRead'
         dbResponse = requests.post(uri,data=json.dumps(details)).json()
         return dbResponse
@@ -157,6 +163,17 @@ class DbRead(Resource):
                 return jsonify({'result':1,'query':query})  # already existing user
             else: # when query contains null
                 return jsonify({"result":0}) # user does not exist
+        
+        if method == 'readMany':
+            query = collection.find(allDetails['details'])
+            if query:
+                # query = query.toArray()
+                for q in query:
+                    q['_id'] = str(q['_id'])
+                query = list(query)
+                return jsonify({'query':query}) # query is being returned as a list
+            else: # when query contains null
+                return jsonify({"result":0}) # no ride with that path exists
             
         
         details = request.get_json(force=True)
