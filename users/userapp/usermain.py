@@ -36,9 +36,8 @@ class AddUser(Resource):
             except:
                 return Response("Invalid Input JSON",status=400,mimetype='application/json')
                 # NEED TO CHECK PWS HERE -> 40 (5) chars, hex symbols only
-                # if not re.match("([a-fA-F0-9]{5})",password):
 
-            if not len(password) == 5:
+            if not re.match("([a-fA-F0-9]{5})",password):
                 return Response("Invalid Password!",status=400,mimetype='application/json')
 
             #CHECKING IF USER ALREADY EXISTS

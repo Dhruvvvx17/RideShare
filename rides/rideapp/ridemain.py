@@ -6,6 +6,7 @@ from bson.objectid import ObjectId
 import requests
 from pymongo import MongoClient
 from flask import Response
+import re
 
 app = Flask(__name__)
 api = Api(app)
@@ -39,9 +40,7 @@ def deleteHelp(allDetails):
 class GlobalRidesAPI(Resource):
     # MAIN API 3 - CREATE RIDE
     def post(self):
-        try:
-            user = userdb.user # user here is a Object of type collection, which isn't JSON serializable
-            ride = ridedb.ride
+        # try:
             try:
                 created_by = request.json['created_by']
                 timestamp = request.json['timestamp']
@@ -49,45 +48,54 @@ class GlobalRidesAPI(Resource):
                 destination = request.json['destination']
             except:
                 return Response("Invalid Input JSON",status=400,mimetype='application/json')
+
             details = {'username':created_by}
             allDetails = {'details':details, 'method':'readOne', 'collection': 'user'}
             dbResponse = readHelp(allDetails) # contains either {'result':0} or {'result':1, query}
+
             if dbResponse.json()["result"] == 0:
                 return Response("User doesn't exists!",status=400,mimetype='application/json')
+
+            if not re.match("((0[1-9]|[1-2][0-9]|3[0-1])-(0[1-9]|1[0-2])-[0-9]{4}:[0-5][0-9]-[0-5][0-9]-(2[0-3]|[01][0-9]))",timestamp):
+                return Response("Invalid Timestamp!",status=400,mimetype='application/json')
+
             if(source in locations.keys() and destination in locations.keys()):
                 details = {'created_by': created_by, 'timestamp': timestamp, 'source':source,'destination':destination}
                 allDetails = {'details':details, 'method':'insert', 'collection':'ride', 'users':[]}
                 dbResponse = insertHelp(allDetails)
+
                 if dbResponse.json()['result'] == 201:
                     return Response("{}", status=201, mimetype="application/json")
                 else:
                     return Response("",status=500,mimetype='application/json')
+
             else:
                 return Response("Invalid source or destination",status=400,mimetype='application/json')
-        except:
-            return Response("",status=500,mimetype='application/json')
+        # except:
+        #     return Response("",status=500,mimetype='application/json')
+
 
     # MAIN API 4 - LIST RIDE FOR GIVEN SOURCE & DESTINATION
     def get(self):
         try:
-            source = request.args.get('source')
-            destination = request.args.get('destination')
-        except: 
-            return Response("Invalid Input JSON",status=400,mimetype='application/json')
-        details = {'source': int(source), 'destination': int(destination)}
-        allDetails = {'details':details,'method':'readMany', 'collection':'ride'}
-        dbResponse = readHelp(allDetails)
-        if dbResponse.json()['result']==1:
-            listOfRides = dbResponse.json()['query']
-            # a = len(listOfRides)
-            return Response(listOfRides, status=200, mimetype='application/json')
-        else:
-            return Response('[]', status=204, mimetype='application/json')
+            try:
+                source = request.args.get('source')
+                destination = request.args.get('destination')
+            except: 
+                return Response("Invalid Input JSON",status=400,mimetype='application/json')
 
-        
-        # uri = 'http://rides:8000/rides/DbRead'
-        # dbResponse = requests.post(uri,data=json.dumps(details)).json()
-        # return dbResponse
+            details = {'source': int(source), 'destination': int(destination)}
+            allDetails = {'details':details,'method':'readMany', 'collection':'ride'}
+            dbResponse = readHelp(allDetails)
+       
+            if dbResponse.json()['result']==1:
+                listOfRides = dbResponse.json()['query']
+                return Response(listOfRides, status=200, mimetype='application/json')
+            else:
+                return Response('[]', status=204, mimetype='application/json')
+        except:
+                return Response('', status=500, mimetype='application/json')
+
 
 class SpecificRidesAPI(Resource):
     # MAIN API 5 - GET INFO ABOUT A SPECIFIC RIDE
