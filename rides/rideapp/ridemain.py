@@ -31,8 +31,11 @@ def readHelp(allDetails):
     dbResponse = requests.post(uriRead,data=json.dumps(allDetails))
     return dbResponse # contains either {'result':0} or {'result':1, query}
 
-
 def deleteHelp(allDetails):
+    dbResponse = requests.post(uriWrite,data=json.dumps(allDetails))
+    return dbResponse
+
+def modifyHelp(allDetails):
     dbResponse = requests.post(uriWrite,data=json.dumps(allDetails))
     return dbResponse
 
@@ -119,17 +122,34 @@ class SpecificRidesAPI(Resource):
 
     # MAIN API 6 - JOIN AN EXISTING RIDE
     def post(self,rideID):
-        if(len(str(rideID))!=24):
-            return "Invalid ride ID"
-        username = request.json['username'] # Username of the user who is trying to join the ride
-        user = userdb.user
-        exists = user.find_one({'username':username})
-        if not exists:
-            return "User does not exists"
-        details = {'username':username,'rideID':rideID,'apiNo': 6}
-        uri = 'http://rides:8000/rides/DbRead'
-        dbResponse = requests.post(uri,data=json.dumps(details)).json()
-        return dbResponse
+        try:
+            if not (re.match("([a-fA-F0-9]{24})",str(rideID))):
+                return Response("Invalid ride ID",400,mimetype='application/json')
+
+            try:
+                username = request.json['username']
+            except:
+                return Response("Invalid Input JSON",status=400,mimetype='application/json')
+
+            details = {'username':username}
+            allDetails = {'details':details, 'method':'readOne', 'collection': 'user'}
+            dbResponse = readHelp(allDetails) # contains either {'result':0} or {'result':1, query}
+
+            if dbResponse.json()["result"] == 0:
+                return Response("User doesn't exists!",status=400,mimetype='application/json')
+
+            details = {'_id':str(rideID)}  # details has "_id" and str(rideId) is "rideID"
+            toInsert = {'users':username}
+            allDetails = {'details':details, 'toInsert':toInsert, 'method':'modify', 'collection':'rides'}
+            dbResponse = modifyHelp(allDetails)
+
+            if dbResponse.json()['result'] == 200:
+                return Response("{}", status=200, mimetype="application/json")
+            else:
+                return Response("",status=500,mimetype='application/json')
+        except:
+            return Response("",status=500,mimetype='application/json')
+
 
     # MAIN API 7 - DELETE A RIDE
     def delete(self,rideID):
@@ -155,13 +175,27 @@ class DbWrite(Resource):
             collection = userdb.user
         else:
             collection = ridedb.ride
+
         method = allDetails['method']
+        details = allDetails['details']
+        if '_id' in details:
+            details['_id'] = ObjectId(details['_id'])
+        
         if method == 'insert':
             try:
-                collection.insert(allDetails['details']) # details -> all ride details
+                collection.insert(details) # details -> all ride details
                 return jsonify({'result' : 201})
             except:
                 return jsonify({'result' : 500})
+
+        if method == 'modify':
+            try:
+                toInsert = allDetails['toInsert']
+                collection.find_one_and_update(details,{'$addToSet' : toInsert})    #toinsert = {'users' : username}
+                return jsonify({'result' : 200})
+            except:
+                return jsonify({'result' : 500})
+
 
 class DbRead(Resource):
     def post(self):
