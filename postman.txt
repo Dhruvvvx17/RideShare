@@ -1,7 +1,8 @@
 API1:
 {
-	"username":"Sam",
-	"password":"1011"
+	"username":"A",
+	"password":"12345"
+
 }
 
 API2:
@@ -9,7 +10,7 @@ API2:
 
 API3:
 {
-    "created_by":"Dev",
+    "created_by":"A",
 	"timestamp":"15-09-2020:00-00-10",
 	"source":1,
 	"destination":2
