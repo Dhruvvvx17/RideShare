@@ -60,8 +60,8 @@ class GlobalRidesAPI(Resource):
                 return Response("Invalid Timestamp!",status=400,mimetype='application/json')
 
             if(source in locations.keys() and destination in locations.keys()):
-                details = {'created_by': created_by, 'timestamp': timestamp, 'source':source,'destination':destination}
-                allDetails = {'details':details, 'method':'insert', 'collection':'ride', 'users':[]}
+                details = {'created_by': created_by, 'timestamp': timestamp, 'source':source,'destination':destination,'users':[]}
+                allDetails = {'details':details, 'method':'insert', 'collection':'ride'}
                 dbResponse = insertHelp(allDetails)
 
                 if dbResponse.json()['result'] == 201:
@@ -92,20 +92,30 @@ class GlobalRidesAPI(Resource):
                 listOfRides = dbResponse.json()['query']
                 return Response(listOfRides, status=200, mimetype='application/json')
             else:
-                return Response('[]', status=204, mimetype='application/json')
+                return Response("[]", status=204, mimetype='application/json')
         except:
-                return Response('', status=500, mimetype='application/json')
+                return Response("", status=500, mimetype='application/json')
 
 
 class SpecificRidesAPI(Resource):
     # MAIN API 5 - GET INFO ABOUT A SPECIFIC RIDE
     def get(self,rideID):
-        if(len(str(rideID))!=24):
-            return "Invalid ride ID"
-        details = {'_id':rideID, 'apiNo': 5}
-        uri = 'http://rides:8000/rides/DbRead'
-        dbResponse = requests.post(uri,data=json.dumps(details)).json()
-        return dbResponse
+        try:
+            if not (re.match("([a-fA-F0-9]{24})",str(rideID))):
+                return Response("Invalid ride ID",400,mimetype='application/json')
+        
+            details = {'_id':str(rideID)}  # details has "_id" and str(rideId) is "rideID"
+            allDetails = {'details':details, 'method':'readOne', 'collection':'rides'}
+            dbResponse = readHelp(allDetails)
+
+            if dbResponse.json()['result'] == 1:
+                rideDetails = dbResponse.json()['query']
+                return Response(rideDetails, status=200, mimetype='application/json')
+            else:
+                return Response("{}", status=204, mimetype='application/json')
+        except:
+                return Response('', status=500, mimetype='application/json')
+
 
     # MAIN API 6 - JOIN AN EXISTING RIDE
     def post(self,rideID):
@@ -158,22 +168,29 @@ class DbRead(Resource):
         
         allDetails = request.get_json(force=True)
         collection = allDetails['collection'] # either 'user' or 'ride'
+        
         if collection == 'user':
             collection = userdb.user
         else:
             collection = ridedb.ride
+        
         method = allDetails['method']
+        details = allDetails['details']
+        if '_id' in details:
+            temp = details['_id']
+            details['_id'] = ObjectId(temp)
+
         if method == 'readOne':
-            query = collection.find_one(allDetails['details']) # details has ('username':username)
+            query = collection.find_one(details) # details has ('username':username)
             if query:
-                # query = jsonify(query)
                 query['_id'] = str(query['_id'])
+                query = json.dumps(query)
                 return jsonify({'result':1,'query':query})  # already existing user
             else: # when query contains null
                 return jsonify({"result":0}) # user does not exist
         
         if method == 'readMany':
-            query = collection.find(allDetails['details'])
+            query = collection.find(details)
             if (query.count() > 0):
                 listOfRides = []
                 for q in query:
