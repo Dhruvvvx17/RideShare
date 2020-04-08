@@ -41,17 +41,17 @@ class AddUser(Resource):
                 return Response("Invalid Password!",status=400,mimetype='application/json')
 
             #CHECKING IF USER ALREADY EXISTS
-            temp = {'username' : username}
-            temp = json.dumps(temp)
-            allTemp = {'temp':temp,'method':'readOne'}
-            dbResponse = readHelp(allTemp) # contains either {'result':0} or {'result':1}
+            details = {'username' : username}
+            allDetails = {'details':details,'method':'readOne'}
+            dbResponse = readHelp(allDetails) # contains either {'result':0} or {'result':1}
+
             if dbResponse.json()["result"] == 1:
                 return Response("User already exists!",status=400,mimetype='application/json')
 
             details = {'username' : username, 'password' : password}
             allDetails = {"details": details, "method":"insert"}
 
-            dbResponse = insertHelp(allDetails)  # all deatils -> { {uswrname, pws}, method }
+            dbResponse = insertHelp(allDetails)  # all details -> { {uswrname, pws}, method }
             if dbResponse.json()['result'] == 201:
                 return Response("{}", status=201, mimetype="application/json")
             else:
@@ -73,11 +73,9 @@ class RemUser(Resource):
         # try:
             user = db.user
             details = {'username':username}
-            
-            temp = {'username' : username}
-            temp = json.dumps(temp)
-            allTemp = {'temp':temp,'method':'readOne'}
-            dbResponse = readHelp(allTemp) # contains either {'result':0} or {'result':1}
+            #details = json.dumps(temp)
+            allDetails = {'details':details,'method':'readOne'}
+            dbResponse = readHelp(allDetails) # contains either {'result':0} or {'result':1}
             if dbResponse.json()["result"] == 0:
                 return Response("User doesn't not exists!",status=400,mimetype='application/json')
             
@@ -101,25 +99,28 @@ class DbWrite(Resource):
                 return jsonify({'result' : 201})
             except:
                 return jsonify({'result' : 500})
-        if method == "delete":
-            # try:
+        elif method == "delete":
+            try:
                 user.delete_one(allDetails['details'])
                 return jsonify({'result' : 200})
- 
+            except:
+                return jsonify({'result' : 500})
+
+
 class DbRead(Resource):
     # DB READ API
     def post(self):
         user = db.user
         allDetails = request.get_json(force=True)
-        temp = json.loads(allDetails['temp'])
-        # allDetails has {{username:username},method}
         method = allDetails['method']
+        details = allDetails['details']
         if method == "readOne":
-            query = user.find_one(temp) # temp has ('username':username)
+            query = user.find_one(details) # details has ('username':username)
             if query:    # new user, can be added
                 return jsonify({"result":1}) # already existing user
             else: 
                 return jsonify({"result":0}) # user does not exist
+
 
 api.add_resource(AddUser,'/users')
 api.add_resource(RemUser,'/users/<username>')
