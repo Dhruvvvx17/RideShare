@@ -40,7 +40,7 @@ def deleteHelp(allDetails):
 class GlobalRidesAPI(Resource):
     # MAIN API 3 - CREATE RIDE
     def post(self):
-        # try:
+        try:
             try:
                 created_by = request.json['created_by']
                 timestamp = request.json['timestamp']
@@ -71,8 +71,8 @@ class GlobalRidesAPI(Resource):
 
             else:
                 return Response("Invalid source or destination",status=400,mimetype='application/json')
-        # except:
-        #     return Response("",status=500,mimetype='application/json')
+        except:
+            return Response("",status=500,mimetype='application/json')
 
 
     # MAIN API 4 - LIST RIDE FOR GIVEN SOURCE & DESTINATION
