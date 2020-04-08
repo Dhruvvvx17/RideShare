@@ -27,7 +27,6 @@ def insertHelp(allDetails):
     return dbResponse 
 
 def readHelp(allDetails):
-
     dbResponse = requests.post(uriRead,data=json.dumps(allDetails))
     return dbResponse # contains either {'result':0} or {'result':1, query}
 
@@ -35,6 +34,7 @@ def readHelp(allDetails):
 def deleteHelp(allDetails):
     dbResponse = requests.post(uriWrite,data=json.dumps(allDetails))
     return dbResponse
+
 
 class GlobalRidesAPI(Resource):
     # MAIN API 3 - CREATE RIDE
@@ -77,17 +77,17 @@ class GlobalRidesAPI(Resource):
         details = {'source': int(source), 'destination': int(destination)}
         allDetails = {'details':details,'method':'readMany', 'collection':'ride'}
         dbResponse = readHelp(allDetails)
-        if dbResponse.json()['query']:
+        if dbResponse.json()['result']==1:
             listOfRides = dbResponse.json()['query']
             # a = len(listOfRides)
             return Response(listOfRides, status=200, mimetype='application/json')
         else:
-            return Response([], status=204, mimetype='application/json')
+            return Response('[]', status=204, mimetype='application/json')
 
         
-        uri = 'http://rides:8000/rides/DbRead'
-        dbResponse = requests.post(uri,data=json.dumps(details)).json()
-        return dbResponse
+        # uri = 'http://rides:8000/rides/DbRead'
+        # dbResponse = requests.post(uri,data=json.dumps(details)).json()
+        # return dbResponse
 
 class SpecificRidesAPI(Resource):
     # MAIN API 5 - GET INFO ABOUT A SPECIFIC RIDE
@@ -166,12 +166,13 @@ class DbRead(Resource):
         
         if method == 'readMany':
             query = collection.find(allDetails['details'])
-            if query:
-                # query = query.toArray()
+            if (query.count() > 0):
+                listOfRides = []
                 for q in query:
                     q['_id'] = str(q['_id'])
-                query = list(query)
-                return jsonify({'query':query}) # query is being returned as a list
+                    listOfRides.append(q)
+                listOfRides = json.dumps(listOfRides)    
+                return jsonify({'result':1,'query':listOfRides}) # query is being returned as a list
             else: # when query contains null
                 return jsonify({"result":0}) # no ride with that path exists
             
