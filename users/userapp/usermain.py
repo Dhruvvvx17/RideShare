@@ -10,7 +10,9 @@ import re
 app = Flask(__name__)
 api = Api(app)
 
-db = MongoClient('mongodb://userdb:27017/').users
+userdb = MongoClient('mongodb://userdb:27017/').users
+ridedb = MongoClient('mongodb://ridedb:27017/').rides
+
 uriWrite = 'http://users:8080/users/DbWrite'
 uriRead = 'http://users:8080/users/DbRead'
 
@@ -23,6 +25,10 @@ def readHelp(allDetails):
     return dbResponse # contains either {'result':0} or {'result':1}
 
 def deleteHelp(allDetails):
+    dbResponse = requests.post(uriWrite,data=json.dumps(allDetails))
+    return dbResponse
+
+def modifyHelp(allDetails):
     dbResponse = requests.post(uriWrite,data=json.dumps(allDetails))
     return dbResponse
 
@@ -42,14 +48,14 @@ class AddUser(Resource):
 
             #CHECKING IF USER ALREADY EXISTS
             details = {'username' : username}
-            allDetails = {'details':details,'method':'readOne'}
+            allDetails = {'details':details,'method':'readOne','collection':'user'}
             dbResponse = readHelp(allDetails) # contains either {'result':0} or {'result':1}
 
             if dbResponse.json()["result"] == 1:
                 return Response("User already exists!",status=400,mimetype='application/json')
 
             details = {'username' : username, 'password' : password}
-            allDetails = {"details": details, "method":"insert"}
+            allDetails = {"details": details, "method":"insert",'collection':'user'}
 
             dbResponse = insertHelp(allDetails)  # all details -> { {uswrname, pws}, method }
             if dbResponse.json()['result'] == 201:
@@ -61,48 +67,83 @@ class AddUser(Resource):
 
     # TEMP API 1 - LIST ALL USERS
     def get(self):
-        user = db.user
         output = []
-        for q in user.find():
+        for q in userdb.user.find():
             output.append({'username':q['username'],'password':q['password']})
         return {'result':output}
 
 class RemUser(Resource):
     # MAIN API 2 - DELETE USER
     def delete(self,username):
-        # try:
-            user = db.user
+        try:
             details = {'username':username}
-            #details = json.dumps(temp)
-            allDetails = {'details':details,'method':'readOne'}
+
+            allDetails = {'details':details,'method':'readOne','collection':'user'}
             dbResponse = readHelp(allDetails) # contains either {'result':0} or {'result':1}
             if dbResponse.json()["result"] == 0:
                 return Response("User doesn't not exists!",status=400,mimetype='application/json')
             
-            # details = json.dumps(details)
-            allDetails = {'details':details,'method':'delete'}
+            allDetails = {'details':details,'method':'deleteOne','collection':'user'}
             dbResponse = deleteHelp(allDetails)
+
             if dbResponse.json()['result'] == 200:
-                return Response("{}", status=200, mimetype="application/json")
+                # Remove all rides created by that user and remove the user from all rides he is a part of.
+                details = {'created_by':username}
+                allDetails = {'details':details,'method':'deleteMany','collection':'rides'}
+                dbResponse_created = deleteHelp(allDetails)     # response returned after the rides created by the user have been removed
+
+                details = {'username':username}
+                allDetails = {'details':details,'method':'modifyList','collection':'rides'}
+                dbResponse_partof = modifyHelp(allDetails)      # response returned after the user is pulled from all the rides he is a part of
+
+                if ((dbResponse_created.json()['result'] == 200) and (dbResponse_partof.json()['result']==200)):
+                    return Response("{}", status=200, mimetype="application/json")
+                else:
+                    return Response("",status=500,mimetype='application/json')
             else:
                 return Response("",status=500,mimetype='application/json')
+
 
 class DbWrite(Resource):
     # DB WRITE API
     def post(self):
-        user = db.user
         allDetails = request.get_json(force=True)  # all details -> { {uswrname, pws}, method }
+        
+        collection = allDetails['collection']
+        if collection == 'user':
+            collection = userdb.user
+        else:
+            collection = ridedb.ride
+
         method = allDetails['method']
+        details = allDetails['details']
+        
         if method == "insert":
             try:
-                user.insert(allDetails['details']) # details -> {uswrname, pws}
+                collection.insert(details) # details -> {uswrname, pws}
                 return jsonify({'result' : 201})
             except:
                 return jsonify({'result' : 500})
-        elif method == "delete":
+
+        elif method == "deleteOne":
             try:
-                user.delete_one(allDetails['details'])
+                collection.delete_one(details)
                 return jsonify({'result' : 200})
+            except:
+                return jsonify({'result' : 500})
+
+        elif method == "deleteMany":
+            try:
+                collection.delete_many(details)
+                return jsonify({'result' : 200})
+            except:
+                return jsonify({'result' : 500})
+
+        elif method == "modifyList":
+            try:
+                user_to_remove = details['username']      #details => {'username':"username"} "username" - from URL
+                collection.update({}, {'$pull':{ 'users':{ '$in': [user_to_remove] }}}, multi=True)
+                return jsonify({'result' : user_to_remove})
             except:
                 return jsonify({'result' : 500})
 
@@ -110,12 +151,19 @@ class DbWrite(Resource):
 class DbRead(Resource):
     # DB READ API
     def post(self):
-        user = db.user
         allDetails = request.get_json(force=True)
+
+        collection = allDetails['collection']
+        if collection == 'user':
+            collection = userdb.user
+        else:
+            collection = ridedb.ride
+
         method = allDetails['method']
         details = allDetails['details']
+
         if method == "readOne":
-            query = user.find_one(details) # details has ('username':username)
+            query = collection.find_one(details) # details has ('username':username)
             if query:    # new user, can be added
                 return jsonify({"result":1}) # already existing user
             else: 
