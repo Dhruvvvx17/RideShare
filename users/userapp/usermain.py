@@ -67,10 +67,18 @@ class AddUser(Resource):
 
     # TEMP API 1 - LIST ALL USERS
     def get(self):
-        output = []
-        for q in userdb.user.find():
-            output.append({'username':q['username'],'password':q['password']})
-        return {'result':output}
+        # try:
+            details = {}
+            allDetails = {'details':details,'method':'readAllUsers','collection':'user'}
+            dbResponse = readHelp(allDetails)
+            if dbResponse.json()["result"] == 1:
+                listOfUsers = dbResponse.json()['query']
+                return Response(listOfUsers, status=200, mimetype="application/json")
+            else:
+                return Response("",status=204,mimetype='application/json')
+        # except:
+        #     return Response("",status=500,mimetype='application/json')
+
 
 class RemUser(Resource):
     # MAIN API 2 - DELETE USER
@@ -99,9 +107,11 @@ class RemUser(Resource):
                 if ((dbResponse_created.json()['result'] == 200) and (dbResponse_partof.json()['result']==200)):
                     return Response("{}", status=200, mimetype="application/json")
                 else:
-                    return Response("",status=500,mimetype='application/json')
+                    return Response("",status=501,mimetype='application/json')
             else:
-                return Response("",status=500,mimetype='application/json')
+                return Response("",status=502,mimetype='application/json')
+        except:
+            return Response("",status=503,mimetype='application/json')
 
 
 class DbWrite(Resource):
@@ -143,7 +153,7 @@ class DbWrite(Resource):
             try:
                 user_to_remove = details['username']      #details => {'username':"username"} "username" - from URL
                 collection.update({}, {'$pull':{ 'users':{ '$in': [user_to_remove] }}}, multi=True)
-                return jsonify({'result' : user_to_remove})
+                return jsonify({'result' : 200})
             except:
                 return jsonify({'result' : 500})
 
@@ -168,6 +178,17 @@ class DbRead(Resource):
                 return jsonify({"result":1}) # already existing user
             else: 
                 return jsonify({"result":0}) # user does not exist
+
+        if method == "readAllUsers":
+            query = collection.find(details)
+            if (query.count() > 0):
+                listOfUsers = []
+                for q in query:
+                    listOfUsers.append(q['username'])
+                listOfUsers = json.dumps(listOfUsers)    
+                return jsonify({'result':1,'query':listOfUsers}) # query is being returned as a list
+            else: # when query contains null
+                return jsonify({"result":0}) # no ride with that path exists
 
 
 api.add_resource(AddUser,'/users')
