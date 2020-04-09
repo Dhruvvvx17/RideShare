@@ -153,17 +153,23 @@ class SpecificRidesAPI(Resource):
 
     # MAIN API 7 - DELETE A RIDE
     def delete(self,rideID):
-        ride = ridedb.ride
-        details = {'_id':rideID,'apiNo':7}
-        uri = 'http://rides:8000/rides/DbRead'
-        rid = requests.post(uri,data=json.dumps(details)).json()['_id']
-        print(rid)
-        if (rid == -1):
-            output = "Ride does not exist"
+
+        if not (re.match("([a-fA-F0-9]{24})",str(rideID))):
+                return Response("Invalid ride ID",400,mimetype='application/json')
+
+        details = {'_id':str(rideID)}  # details has "_id" and str(rideId) is "rideID
+        allDetails = {'details':details,'method':'readOne','collection':'ride'}
+        dbResponse = readHelp(allDetails)
+        if dbResponse.json()['result'] == 0:
+            return Response("Ride ID doesn't exist",400,mimetype='application/json')
+
+        allDetails = {'details':details,'method':'deleteOne','collection':'ride'}
+        dbResponse = deleteHelp(allDetails)
+        if dbResponse.json()['result'] == 200:
+            return Response("{}", status=200, mimetype="application/json")
         else:
-            ride.delete_one({'_id':ObjectId(rid)})
-            output = 'Deleted Successfully!'
-        return output
+            return Response("",status=500,mimetype='application/json')
+
 
 class DbWrite(Resource):
     def post(self):
@@ -188,10 +194,17 @@ class DbWrite(Resource):
             except:
                 return jsonify({'result' : 500})
 
-        if method == 'modify':
+        elif method == 'modify':
             try:
                 toInsert = allDetails['toInsert']
                 collection.find_one_and_update(details,{'$addToSet' : toInsert})    #toinsert = {'users' : username}
+                return jsonify({'result' : 200})
+            except:
+                return jsonify({'result' : 500})
+
+        elif method == 'deleteOne':
+            try:
+                collection.delete_one(details)
                 return jsonify({'result' : 200})
             except:
                 return jsonify({'result' : 500})
