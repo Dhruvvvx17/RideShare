@@ -65,7 +65,7 @@ class AddUser(Resource):
         except:
             return Response("",status=500,mimetype='application/json')
 
-    # TEMP API 1 - LIST ALL USERS
+    # MAIN API 10 - LIST ALL USERS
     def get(self):
         # try:
             details = {}
