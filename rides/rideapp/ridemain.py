@@ -153,21 +153,23 @@ class SpecificRidesAPI(Resource):
 
     # MAIN API 7 - DELETE A RIDE
     def delete(self,rideID):
+        try:
+            if not (re.match("([a-fA-F0-9]{24})",str(rideID))):
+                    return Response("Invalid ride ID",400,mimetype='application/json')
 
-        if not (re.match("([a-fA-F0-9]{24})",str(rideID))):
-                return Response("Invalid ride ID",400,mimetype='application/json')
+            details = {'_id':str(rideID)}  # details has "_id" and str(rideId) is "rideID
+            allDetails = {'details':details,'method':'readOne','collection':'ride'}
+            dbResponse = readHelp(allDetails)
+            if dbResponse.json()['result'] == 0:
+                return Response("Ride ID doesn't exist",400,mimetype='application/json')
 
-        details = {'_id':str(rideID)}  # details has "_id" and str(rideId) is "rideID
-        allDetails = {'details':details,'method':'readOne','collection':'ride'}
-        dbResponse = readHelp(allDetails)
-        if dbResponse.json()['result'] == 0:
-            return Response("Ride ID doesn't exist",400,mimetype='application/json')
-
-        allDetails = {'details':details,'method':'deleteOne','collection':'ride'}
-        dbResponse = deleteHelp(allDetails)
-        if dbResponse.json()['result'] == 200:
-            return Response("{}", status=200, mimetype="application/json")
-        else:
+            allDetails = {'details':details,'method':'deleteOne','collection':'ride'}
+            dbResponse = deleteHelp(allDetails)
+            if dbResponse.json()['result'] == 200:
+                return Response("{}", status=200, mimetype="application/json")
+            else:
+                return Response("",status=500,mimetype='application/json')
+        except:
             return Response("",status=500,mimetype='application/json')
 
 
@@ -249,56 +251,6 @@ class DbRead(Resource):
                 return jsonify({"result":0}) # no ride with that path exists
             
         
-        details = request.get_json(force=True)
-        apiNo = details['apiNo']
-        if apiNo == 4:
-            source = details['source']
-            destination = details['destination']
-            results = ride.find({'source': source, 'destination': destination})
-            print(results)
-            output = []
-            for row in results:
-                output.append({'rideID':str(row['_id']),'created_by':row['created_by'],'timestamp':row['timestamp']})
-            return output
-
-        elif apiNo == 5:
-            rideID = details['_id']
-            query = ride.find_one({'_id': ObjectId(rideID)})
-            if query:
-                output = {}
-                output['_id'] = str(query['_id'])
-                output['created_by'] = query['created_by']
-                output['timestamp'] = query['timestamp']
-                output['source'] = query['source']
-                output['destination'] = query['destination']
-                output['users'] = query['users']
-                return output
-            else:
-                return "No such ride exists"
-  
-        elif apiNo == 6:
-            rideID = details['rideID']
-            username = details['username']
-            query = ride.find_one({'_id': ObjectId(rideID)})
-            if query:   
-                users = query['users']
-                users.append(username)
-                ride.find_one_and_update({'_id':ObjectId(rideID)},{'$set':{'users':users}},upsert=False)
-                return "User Added"
-            else:
-                return "Ride does not exist"
-
-        elif apiNo == 7:
-            rideID = details['_id']
-            #rideID is coming in as a string, thus we typecast it to ObjectID to access it
-            query = ride.find_one({'_id':ObjectId(rideID)})
-            if not query:
-                resp = {'_id': -1}
-            else:
-                resp = {'_id' : str(query['_id'])}
-            return jsonify(resp)
-
-
 api.add_resource(GlobalRidesAPI,'/rides')
 api.add_resource(SpecificRidesAPI,'/rides/<rideID>')
 api.add_resource(DbWrite,'/rides/DbWrite')
