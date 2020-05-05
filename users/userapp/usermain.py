@@ -13,8 +13,6 @@ api = Api(app)
 
 userdb = MongoClient('mongodb://userdb:27017/').users
 albPath = alb_dns
-# ridedb = MongoClient('mongodb://ridedb:27017/').rides
-# ridedb = MongoClient('mongodb://ec2-34-229-135-1.compute-1.amazonaws.com:27017/').rides
 
 uriWrite = 'http://users:8080/users/DbWrite'
 uriRead = 'http://users:8080/users/DbRead'
@@ -25,7 +23,7 @@ def insertHelp(allDetails):
 
 def readHelp(allDetails):
     dbResponse = requests.post(uriRead,data=json.dumps(allDetails))
-    return dbResponse # contains either {'result':0} or {'result':1}
+    return dbResponse
 
 def deleteHelp(allDetails):
     dbResponse = requests.post(uriWrite,data=json.dumps(allDetails))
@@ -70,7 +68,7 @@ class AddUser(Resource):
 
     # MAIN API 10 - LIST ALL USERS
     def get(self):
-        # try:
+        try:
             details = {}
             allDetails = {'details':details,'method':'readAllUsers','collection':'user'}
             dbResponse = readHelp(allDetails)
@@ -79,14 +77,14 @@ class AddUser(Resource):
                 return Response(listOfUsers, status=200, mimetype="application/json")
             else:
                 return Response("",status=204,mimetype='application/json')
-        # except:
-        #     return Response("",status=500,mimetype='application/json')
+        except:
+            return Response("",status=500,mimetype='application/json')
 
 
 class RemUser(Resource):
     # MAIN API 2 - DELETE USER
     def delete(self,username):
-        # try:
+        try:
             details = {'username':username}
 
             allDetails = {'details':details,'method':'readOne','collection':'user'}
@@ -101,12 +99,10 @@ class RemUser(Resource):
                 # Remove all rides created by that user and remove the user from all rides he is a part of.
                 details = {'created_by':username}
                 allDetails = {'details':details,'method':'deleteMany','collection':'ride'}
-                # dbResponse_created = deleteHelp(allDetails)     # response returned after the rides created by the user have been removed
                 dbResponse_created = requests.post(albPath + "/rides/DbWrite",data=json.dumps(allDetails))
 
                 details = {'username':username}
                 allDetails = {'details':details,'method':'modifyList','collection':'ride'}
-                # dbResponse_partof = modifyHelp(allDetails)      # response returned after the user is pulled from all the rides he is a part of
                 dbResponse_partof = requests.post(albPath + "/rides/DbWrite",data=json.dumps(allDetails))
 
 
@@ -116,8 +112,8 @@ class RemUser(Resource):
                     return Response("",status=501,mimetype='application/json')
             else:
                 return Response("",status=502,mimetype='application/json')
-        # except:
-            # return Response("",status=503,mimetype='application/json')
+        except:
+            return Response("",status=503,mimetype='application/json')
 
 
 class DbWrite(Resource):
@@ -128,8 +124,9 @@ class DbWrite(Resource):
         collection = allDetails['collection']
         if collection == 'user':
             collection = userdb.user
-        # else:
-        #     collection = ridedb.ride
+        # Any other collection other than "ride" should not be accessed in this API.
+        else:
+            return jsonify({'result' : 500})
 
         method = allDetails['method']
         details = allDetails['details']
@@ -171,9 +168,10 @@ class DbRead(Resource):
 
         collection = allDetails['collection']
         if collection == 'user':
-            collection = userdb.user
-        # else:
-        #     collection = ridedb.ride
+            collection = userdb.user       
+        # Any other collection other than "ride" should not be accessed in this API.
+        else:
+            return jsonify({'result' : 500})
 
         method = allDetails['method']
         details = allDetails['details']
