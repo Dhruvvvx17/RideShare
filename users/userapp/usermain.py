@@ -11,7 +11,8 @@ app = Flask(__name__)
 api = Api(app)
 
 userdb = MongoClient('mongodb://userdb:27017/').users
-ridedb = MongoClient('mongodb://ridedb:27017/').rides
+# ridedb = MongoClient('mongodb://ridedb:27017/').rides
+# ridedb = MongoClient('mongodb://ec2-34-229-135-1.compute-1.amazonaws.com:27017/').rides
 
 uriWrite = 'http://users:8080/users/DbWrite'
 uriRead = 'http://users:8080/users/DbRead'
@@ -122,8 +123,8 @@ class DbWrite(Resource):
         collection = allDetails['collection']
         if collection == 'user':
             collection = userdb.user
-        else:
-            collection = ridedb.ride
+        # else:
+        #     collection = ridedb.ride
 
         method = allDetails['method']
         details = allDetails['details']
@@ -166,8 +167,8 @@ class DbRead(Resource):
         collection = allDetails['collection']
         if collection == 'user':
             collection = userdb.user
-        else:
-            collection = ridedb.ride
+        # else:
+        #     collection = ridedb.ride
 
         method = allDetails['method']
         details = allDetails['details']

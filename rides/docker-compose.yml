@@ -12,17 +12,17 @@ services:
             - "8000"
         depends_on:
             - ridedb
-        networks:
-            - users_ridesharenet
+        # networks:
+        #     - users_ridesharenet
 
     ridedb:
         container_name: ridedb
         build: "./mongodb"
         ports:
             - '27018:27017'
-        networks:
-            - users_ridesharenet
+        # networks:
+        #     - users_ridesharenet
 
-networks:
-    users_ridesharenet:
-            external: true
+# networks:
+#     users_ridesharenet:
+#             external: true

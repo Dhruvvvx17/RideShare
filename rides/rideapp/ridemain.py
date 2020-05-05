@@ -12,7 +12,7 @@ app = Flask(__name__)
 api = Api(app)
 
 ridedb = MongoClient('mongodb://ridedb:27017/').rides
-userdb = MongoClient('mongodb://userdb:27017/').users
+# userdb = MongoClient('mongodb://userdb:27017/').users
 
 # # for accessing the users DB
 # uriUsersWrite = 'http://users:8080/users/DbWrite'
@@ -54,7 +54,8 @@ class GlobalRidesAPI(Resource):
 
             details = {'username':created_by}
             allDetails = {'details':details, 'method':'readOne', 'collection': 'user'}
-            dbResponse = readHelp(allDetails) # contains either {'result':0} or {'result':1, query}
+            # dbResponse = readHelp(allDetails) # contains either {'result':0} or {'result':1, query}
+            dbResponse = requests.post("http://rsALB-1978085830.us-east-1.elb.amazonaws.com/users/DbRead",data=json.dumps(allDetails))
 
             if dbResponse.json()["result"] == 0:
                 return Response("User doesn't exists!",status=400,mimetype='application/json')
@@ -179,10 +180,10 @@ class DbWrite(Resource):
         allDetails = request.get_json(force=True)
         
         collection = allDetails['collection'] # either 'user' or 'ride'
-        if collection == 'user':
-            collection = userdb.user
-        else:
+        if collection == 'ride':
             collection = ridedb.ride
+        # else:
+        #     collection = ridedb.ride
 
         method = allDetails['method']
         details = allDetails['details']
@@ -218,10 +219,10 @@ class DbRead(Resource):
         allDetails = request.get_json(force=True)
         collection = allDetails['collection'] # either 'user' or 'ride'
         
-        if collection == 'user':
-            collection = userdb.user
-        else:
+        if collection == 'ride':
             collection = ridedb.ride
+        # else:
+        #     collection = ridedb.ride
         
         method = allDetails['method']
         details = allDetails['details']

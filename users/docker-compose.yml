@@ -14,8 +14,8 @@ services:
             - "8080"
         depends_on:
             - userdb
-        networks:
-            - ridesharenet
+        # networks:
+        #     - ridesharenet
 
     userdb:
         # not pulling the actual mongo image here. look in docker file
@@ -25,9 +25,9 @@ services:
 
         ports:
             - '27017:27017'
-        networks:
-            - ridesharenet
+        # networks:
+        #     - ridesharenet
 
-networks:
-        ridesharenet:
-            driver: bridge
+# networks:
+#         ridesharenet:
+#             driver: bridge
