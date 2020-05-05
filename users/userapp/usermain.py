@@ -3,6 +3,7 @@ from flask_pymongo import PyMongo
 from flask_restful import Resource, Api
 from bson.objectid import ObjectId
 import requests
+from aws import alb_dns
 from pymongo import MongoClient
 from flask import Response
 import re
@@ -11,6 +12,7 @@ app = Flask(__name__)
 api = Api(app)
 
 userdb = MongoClient('mongodb://userdb:27017/').users
+albPath = alb_dns
 # ridedb = MongoClient('mongodb://ridedb:27017/').rides
 # ridedb = MongoClient('mongodb://ec2-34-229-135-1.compute-1.amazonaws.com:27017/').rides
 
@@ -100,12 +102,12 @@ class RemUser(Resource):
                 details = {'created_by':username}
                 allDetails = {'details':details,'method':'deleteMany','collection':'ride'}
                 # dbResponse_created = deleteHelp(allDetails)     # response returned after the rides created by the user have been removed
-                dbResponse_created = requests.post("http://rsALB-1978085830.us-east-1.elb.amazonaws.com/rides/DbWrite",data=json.dumps(allDetails))
+                dbResponse_created = requests.post(albPath + "/rides/DbWrite",data=json.dumps(allDetails))
 
                 details = {'username':username}
                 allDetails = {'details':details,'method':'modifyList','collection':'ride'}
                 # dbResponse_partof = modifyHelp(allDetails)      # response returned after the user is pulled from all the rides he is a part of
-                dbResponse_partof = requests.post("http://rsALB-1978085830.us-east-1.elb.amazonaws.com/rides/DbWrite",data=json.dumps(allDetails))
+                dbResponse_partof = requests.post(albPath + "/rides/DbWrite",data=json.dumps(allDetails))
 
 
                 if ((dbResponse_created.json()['result'] == 200) and (dbResponse_partof.json()['result']==200)):

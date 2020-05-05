@@ -4,6 +4,7 @@ from flask_restful import Resource, Api
 from constants import locations
 from bson.objectid import ObjectId
 import requests
+from aws import alb_dns
 from pymongo import MongoClient
 from flask import Response
 import re
@@ -12,6 +13,7 @@ app = Flask(__name__)
 api = Api(app)
 
 ridedb = MongoClient('mongodb://ridedb:27017/').rides
+albPath = alb_dns
 # userdb = MongoClient('mongodb://userdb:27017/').users
 
 # # for accessing the users DB
@@ -55,7 +57,7 @@ class GlobalRidesAPI(Resource):
             details = {'username':created_by}
             allDetails = {'details':details, 'method':'readOne', 'collection': 'user'}
             # dbResponse = readHelp(allDetails) # contains either {'result':0} or {'result':1, query}
-            dbResponse = requests.post("http://rsALB-1978085830.us-east-1.elb.amazonaws.com/users/DbRead",data=json.dumps(allDetails))
+            dbResponse = requests.post(albPath + "/users/DbRead",data=json.dumps(allDetails))
 
             if dbResponse.json()["result"] == 0:
                 return Response("User doesn't exists!",status=400,mimetype='application/json')
