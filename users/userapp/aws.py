@@ -1,1 +1,1 @@
-alb_dns = "rsALB-1978085830.us-east-1.elb.amazonaws.com"
+alb_dns = "http://rsALB-1978085830.us-east-1.elb.amazonaws.com"
