@@ -38,23 +38,24 @@ server {
 	#
 	# include snippets/snakeoil.conf;
 
-	root /home/ubuntu/venv/RideShare/users;
+	root /var/www/html;
 
 	# Add index.php to the list if you are using PHP
 	index index.html index.htm index.nginx-debian.html;
 
-	server_name ec2-3-81-137-64.compute-1.amazonaws.com;
+	server_name _;
 
-	location /users {
-		proxy_pass http://127.0.0.1:8080/users;
-		# First attempt to serve request as file, then
-		# as directory, then fall back to displaying a 404.
-		# try_files $uri $uri/ =404;
-	}
+	# RIDESHARE MODIFICATIONS ----------------
 
 	location /rides {
-		proxy_pass http://127.0.0.1/rides;
+		proxy_pass http://127.0.0.1:8000$request_uri;
 	}
+
+	location /rides/ {
+		proxy_pass http://127.0.0.1:8000$request_uri;
+	}
+
+	# RIDESHARE MODIFICATIONS ----------------
 
 	# pass PHP scripts to FastCGI server
 	#
