@@ -109,7 +109,7 @@ class SpecificRidesAPI(Resource):
                 return Response("Invalid ride ID",400,mimetype='application/json')
         
             details = {'_id':str(rideID)}  # details has "_id" and str(rideId) is "rideID"
-            allDetails = {'details':details, 'method':'readOne', 'collection':'rides'}
+            allDetails = {'details':details, 'method':'readOne', 'collection':'ride'}
             dbResponse = readHelp(allDetails)
 
             if dbResponse.json()['result'] == 1:
@@ -141,7 +141,7 @@ class SpecificRidesAPI(Resource):
 
             details = {'_id':str(rideID)}  # details has "_id" and str(rideId) is "rideID"
             toInsert = {'users':username}
-            allDetails = {'details':details, 'toInsert':toInsert, 'method':'modify', 'collection':'rides'}
+            allDetails = {'details':details, 'toInsert':toInsert, 'method':'modify', 'collection':'ride'}
             dbResponse = modifyHelp(allDetails)
 
             if dbResponse.json()['result'] == 200:
