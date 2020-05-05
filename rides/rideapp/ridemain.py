@@ -212,6 +212,21 @@ class DbWrite(Resource):
             except:
                 return jsonify({'result' : 500})
 
+        elif method == "deleteMany":
+            try:
+                collection.delete_many(details)
+                return jsonify({'result' : 200})
+            except:
+                return jsonify({'result' : 500})
+
+        elif method == "modifyList":
+            try:
+                user_to_remove = details['username']      #details => {'username':"username"} "username" - from URL
+                collection.update({}, {'$pull':{ 'users':{ '$in': [user_to_remove] }}}, multi=True)
+                return jsonify({'result' : 200})
+            except:
+                return jsonify({'result' : 500})
+
 
 class DbRead(Resource):
     def post(self):

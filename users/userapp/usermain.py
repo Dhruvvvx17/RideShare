@@ -99,11 +99,14 @@ class RemUser(Resource):
                 # Remove all rides created by that user and remove the user from all rides he is a part of.
                 details = {'created_by':username}
                 allDetails = {'details':details,'method':'deleteMany','collection':'rides'}
-                dbResponse_created = deleteHelp(allDetails)     # response returned after the rides created by the user have been removed
+                # dbResponse_created = deleteHelp(allDetails)     # response returned after the rides created by the user have been removed
+                dbResponse = requests.post("http://rsALB-1978085830.us-east-1.elb.amazonaws.com/rides/DbWrite",data=json.dumps(allDetails))
 
                 details = {'username':username}
                 allDetails = {'details':details,'method':'modifyList','collection':'rides'}
                 dbResponse_partof = modifyHelp(allDetails)      # response returned after the user is pulled from all the rides he is a part of
+                dbResponse = requests.post("http://rsALB-1978085830.us-east-1.elb.amazonaws.com/rides/DbWrite",data=json.dumps(allDetails))
+
 
                 if ((dbResponse_created.json()['result'] == 200) and (dbResponse_partof.json()['result']==200)):
                     return Response("{}", status=200, mimetype="application/json")
