@@ -14,11 +14,7 @@ api = Api(app)
 
 ridedb = MongoClient('mongodb://ridedb:27017/').rides
 albPath = alb_dns
-# userdb = MongoClient('mongodb://userdb:27017/').users
 
-# # for accessing the users DB
-# uriUsersWrite = 'http://users:8080/users/DbWrite'
-# uriUsersRead = 'http://users:8080/users/DbRead'
 
 # for accessing the rides DB
 uriWrite = 'http://rides:8000/rides/DbWrite'
@@ -31,7 +27,7 @@ def insertHelp(allDetails):
 
 def readHelp(allDetails):
     dbResponse = requests.post(uriRead,data=json.dumps(allDetails))
-    return dbResponse # contains either {'result':0} or {'result':1, query}
+    return dbResponse
 
 def deleteHelp(allDetails):
     dbResponse = requests.post(uriWrite,data=json.dumps(allDetails))
@@ -136,7 +132,7 @@ class SpecificRidesAPI(Resource):
 
             details = {'username':username}
             allDetails = {'details':details, 'method':'readOne', 'collection': 'user'}
-            dbResponse = readHelp(allDetails) # contains either {'result':0} or {'result':1, query}
+            dbResponse = requests.post(albPath + "/users/DbRead",data=json.dumps(allDetails))
 
             if dbResponse.json()["result"] == 0:
                 return Response("User doesn't exists!",status=400,mimetype='application/json')
@@ -184,8 +180,9 @@ class DbWrite(Resource):
         collection = allDetails['collection'] # either 'user' or 'ride'
         if collection == 'ride':
             collection = ridedb.ride
-        # else:
-        #     collection = ridedb.ride
+        # Any other collection other than "ride" should not be accessed in this API.
+        else:
+            return jsonify({'result' : 500})
 
         method = allDetails['method']
         details = allDetails['details']
@@ -202,7 +199,8 @@ class DbWrite(Resource):
         elif method == 'modify':
             try:
                 toInsert = allDetails['toInsert']
-                collection.find_one_and_update(details,{'$addToSet' : toInsert})    #toinsert = {'users' : username}
+                #toinsert = {'users' : username}
+                collection.find_one_and_update(details,{'$addToSet' : toInsert})
                 return jsonify({'result' : 200})
             except:
                 return jsonify({'result' : 500})
@@ -234,13 +232,14 @@ class DbRead(Resource):
     def post(self):
         
         allDetails = request.get_json(force=True)
-        collection = allDetails['collection'] # either 'user' or 'ride'
+        collection = allDetails['collection']
         
         if collection == 'ride':
             collection = ridedb.ride
-        # else:
-        #     collection = ridedb.ride
-        
+        # Any other collection other than "ride" should not be accessed in this API.
+        else:
+            return jsonify({'result' : 500})
+
         method = allDetails['method']
         details = allDetails['details']
         if '_id' in details:
